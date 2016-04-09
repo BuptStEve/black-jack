@@ -2,7 +2,7 @@
 * @Author: BuptStEve
 * @Date:   2016-04-09 10:13:22
 * @Last Modified by:   BuptStEve
-* @Last Modified time: 2016-04-09 20:43:08
+* @Last Modified time: 2016-04-09 22:23:29
 */
 
 'use strict';
@@ -55,14 +55,24 @@ function Deck(userNum) {
     Deck.prototype.deal = function() {
       if (!this.canDeal) { return 1; }
 
+      // 初始化
+      this.dlrCards = []; // 庄家手牌
+      this.dlrPoint = 0;  // 庄家的总分
+      this.usrCards = []; // 闲家手牌
+      this.usrPoint = 0;  // 闲家的总分
+      this.canHit   = false;
+      this.canStand = false;
+      this.canDeal  = false;
+      this.result   = 0;
+
       // 给庄家发牌
       this.dlrCards.push(this._draw());
       this.dlrCards.push(this._draw());
       this.dlrPoint = this._calcPoint(this.dlrCards);
 
       /* test */
-      console.log('庄家手牌：' + this.dlrCards);
-      console.log('庄家点数：' + this.dlrCards[0].value + this.dlrCards[1].value);
+      console.log('庄家手牌：' + this.dlrCards[0].suit + ' ' + this.dlrCards[1].suit);
+      console.log('庄家点数：' + this.dlrCards[0].value + ' ' + this.dlrCards[1].value);
 
       // 给玩家发牌
       this.usrCards.push(this._draw());
@@ -70,8 +80,8 @@ function Deck(userNum) {
       this.usrPoint = this._calcPoint(this.usrCards);
 
       /* test */
-      console.log('闲家手牌：' + this.usrCards);
-      console.log('闲家点数：' + this.usrPoint);
+      console.log('闲家手牌：' + this.usrCards[0].suit + ' ' + this.usrCards[1].suit);
+      console.log('闲家点数：' + this.usrCards[0].value + ' ' + this.usrCards[1].value);
 
       this._changeState(); // 状态迁移
 
@@ -130,17 +140,6 @@ function Deck(userNum) {
      */
     Deck.prototype._newDeck = function() {
       var i, j; // 循环下标，分别表示花色和点数
-
-      // 初始化
-      this.deck     = []; // 一副牌
-      this.dlrCards = []; // 庄家手牌
-      this.dlrPoint = 0;  // 庄家的总分
-      this.usrCards = []; // 闲家手牌
-      this.usrPoint = 0;  // 闲家的总分
-      this.canHit   = false;
-      this.canStand = false;
-      this.canDeal  = true;
-      this.result   = 0;
 
       for (i = 1; i <= 4; i += 1) {
         for (j = 1; j <= 13; j += 1) {
