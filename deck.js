@@ -2,7 +2,7 @@
 * @Author: BuptStEve
 * @Date:   2016-04-09 10:13:22
 * @Last Modified by:   BuptStEve
-* @Last Modified time: 2016-04-09 22:23:29
+* @Last Modified time: 2016-04-09 23:12:02
 */
 
 'use strict';
@@ -24,7 +24,17 @@
  *   5. hit：加一张牌
  *     5.1. 计算该闲家点数，若没 bust 则转3可以选择 stand/hit
  *
- *   花色(1：黑桃，2：红桃，3：梅花，4：方块，顺序参考自 wiki)
+ *   注：花色(1：黑桃，2：红桃，3：梅花，4：方块，顺序参考自 wiki)
+ *      this.result：
+ *        -3：闲家 bust
+ *        -2：平局
+ *        -1：庄家胜
+ *        0：胜负未分
+ *        1：闲家胜
+ *        2：庄家 bust
+ *      this.data 分两种情况：
+ *        * 胜负未分：不含庄家第一张牌和庄家点数
+ *        * 胜负已分：含庄家第一张牌和庄家点数
  */
 
 /**
@@ -44,6 +54,7 @@ function Deck(userNum) {
   this.canStand = false;
   this.canDeal  = true;
   this.result   = 0;
+  this.data;          // 向客户端传递的信息
 
   // 定义方法
   if (typeof this.deal != "function") {
@@ -116,22 +127,36 @@ function Deck(userNum) {
       // 当前无法 stand(已经赢了或输了)
       if (!this.canStand) { return 1; }
 
-      var tmp    = this._addCard();
       this.canHit   = false;
       this.canStand = false;
 
+      var tmp = this._addCard();
       if (tmp === -1) {
         console.log('闲家胜！');
+        this.result = 2;
       } else {
         if (tmp < this.usrPoint) {
           console.log(tmp + ' 闲家胜！');
+          this.result = 1;
         } else if (tmp > this.usrPoint) {
           console.log(tmp + ' 庄家胜！');
+          this.result = -1;
         } else {
           console.log('平局！');
+          this.result = -2;
         }
       }
       this.canDeal = true;
+      this.data = {
+        dc    : this.dlrCards,
+        dp    : this.dlrPoint,
+        uc    : this.usrCards,
+        up    : this.usrPoint,
+        hit   : this.canHit,
+        stand : this.canStand,
+        deal  : this.canDeal,
+        result: this.result
+      };
     };
 
     /**
@@ -181,27 +206,61 @@ function Deck(userNum) {
         case -1:
           console.log('庄家胜!');
           this.canDeal = true;
+          this.result = -1;
+          this.data = {
+            dc    : this.dlrCards,
+            dp    : this.dlrPoint,
+            uc    : this.usrCards,
+            up    : this.usrPoint,
+            hit   : this.canHit,
+            stand : this.canStand,
+            deal  : this.canDeal,
+            result: this.result
+          };
           break;
         case 0:
           // 等待闲家进一步操作
+          this.data = {
+            dc   : this.dlrCards.slice(1),
+            uc   : this.usrCards,
+            up   : this.usrPoint,
+            hit  : this.canHit,
+            stand: this.canStand,
+            deal : this.canDeal,
+            result: this.result
+          };
           break;
         case 1:
           if (this.usrCards.length === 2) {
             // 第一轮拿到 BlackJack
             console.log('闲家胜!');
+            this.result = 1;
           } else if (this.dlrPoint === 21) {
             // 闲家凑齐21点，庄家为 BlackJack
             console.log('庄家胜!');
+            this.result = -1;
           } else {
             // 进行庄家加牌操作
             if (this._addCard() === 21) {
               // 庄家加牌后也为21点，平局
               console.log('平局!');
+              this.result = -2;
             } else {
               console.log('闲家胜!');
+              this.result = 1;
             }
           }
           this.canDeal = true;
+          this.data = {
+            dc    : this.dlrCards,
+            dp    : this.dlrPoint,
+            uc    : this.usrCards,
+            up    : this.usrPoint,
+            hit   : this.canHit,
+            stand : this.canStand,
+            deal  : this.canDeal,
+            result: this.result
+          };
           break;
         default:
           console.log('error!');
