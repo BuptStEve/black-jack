@@ -1,8 +1,12 @@
 {
   "name": "black-jack",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "black-jack for 360",
   "main": "index.js",
+  "dependencies": {
+    "express": "^4.13.4",
+    "socket.io": "^1.4.5"
+  },
   "devDependencies": {
     "cz-conventional-changelog": "^1.1.5"
   },

@@ -1,0 +1,125 @@
+<!doctype html>
+<html>
+  <head>
+    <title>test BlackJack</title>
+    <style>
+    </style>
+  </head>
+  <body>
+    <div id="dlrCards">
+      <div class="cards"></div>
+    </div>
+    <div id="usrCards">
+      <div class="cards"></div>
+      <div class="point"></div>
+    </div>
+
+    <button id="hit">hit</button>
+    <button id="stand">stand</button>
+    <button id="deal">deal</button>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      var socket = io(),
+          $ = function(el) { return document.querySelector(el); },
+          deck;
+
+      socket.on('status', function(msg){
+        deck = JSON.parse(msg);
+        prettyDeck(deck);
+        console.log(msg);
+
+        $("#dlrCards .cards").innerHTML = deck.dc.txt;
+        $("#usrCards .cards").innerHTML = deck.uc.txt;
+        $("#usrCards .point").innerHTML = deck.up;
+
+        $("#hit").disabled = !deck.hit;
+        $("#stand").disabled = !deck.stand;
+        $("#deal").disabled = !deck.deal;
+
+        switch(deck.result) {
+          case -3:
+            console.log('由于闲家'  + deck.up + '点 bust ' + '庄家胜');
+            break;
+          case -2:
+            console.log('平局' + deck.dp);
+            break;
+          case -1:
+            console.log('庄家' + deck.dp + '点 胜 闲家 ' + deck.up + '点');
+            break;
+          case 0:
+            break;
+          case 1:
+            console.log('闲家' + deck.up + '点 胜 庄家 ' + deck.dp + '点');
+            break;
+          case 2:
+            console.log('由于庄家'  + deck.dp + '点 bust ' + '闲家胜');
+            break;
+          default:
+            alert('なに！？');
+            break;
+        }
+      });
+
+      $("#hit").addEventListener('click', function(){
+        socket.emit('blackjack', 'hit');
+      }, false);
+
+      $("#stand").addEventListener('click', function(){
+        socket.emit('blackjack', 'stand');
+      }, false);
+
+      $("#deal").addEventListener('click', function(){
+        socket.emit('blackjack', 'deal');
+      }, false);
+
+      function prettyDeck(dk) {
+        var i, len;
+        dk.dc.txt = '';
+        dk.uc.txt = '';
+
+        for (i = 0, len = dk.dc.length; i < len; i += 1) {
+          switch(dk.dc[i].suit) {
+            case 1:
+              dk.dc.txt += '黑桃' + dk.dc[i].value + ' ';
+              break;
+            case 2:
+              dk.dc.txt += '红桃' + dk.dc[i].value + ' ';
+              break;
+            case 3:
+              dk.dc.txt += '梅花' + dk.dc[i].value + ' ';
+              break;
+            case 4:
+              dk.dc.txt += '方块' + dk.dc[i].value + ' ';
+              break;
+            default:
+              alert('なに！？');
+              break;
+          }
+        }
+
+        for (i = 0, len = dk.uc.length; i < len; i += 1) {
+          switch(dk.uc[i].suit) {
+            case 1:
+              dk.uc.txt += '黑桃' + dk.uc[i].value + ' ';
+              break;
+            case 2:
+              dk.uc.txt += '红桃' + dk.uc[i].value + ' ';
+              break;
+            case 3:
+              dk.uc.txt += '梅花' + dk.uc[i].value + ' ';
+              break;
+            case 4:
+              dk.uc.txt += '方块' + dk.uc[i].value + ' ';
+              break;
+            default:
+              alert('なに！？');
+              break;
+          }
+        }
+
+      }
+
+    </script>
+  </body>
+</html>
