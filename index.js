@@ -1,12 +1,44 @@
 /*
 * @Author: BuptStEve
-* @Date:   2016-04-09 20:22:59
+* @Date:   2016-04-08 21:19:39
 * @Last Modified by:   BuptStEve
-* @Last Modified time: 2016-04-09 20:28:21
+* @Last Modified time: 2016-04-09 23:15:38
 */
 
-'use strict';
+var app  = require('express')(),
+    http = require('http').Server(app),
+    io   = require('socket.io')(http),
+    Deck = require('./deck'),
+    game = new Deck()._newDeck().deal();
 
-var Deck = require('./deck');
+app.get('/', function(req, res){
+  res.sendFile(__dirname + '/index.html');
+});
 
-var game = new Deck()._newDeck().deal();
+io.on('connection', function(socket){
+  io.emit('status', JSON.stringify(game.data));
+
+  socket.on('blackjack', function(msg){
+    switch(msg) {
+      case 'hit':
+        game.hit();
+        io.emit('status', JSON.stringify(game.data));
+        break;
+      case 'stand':
+        game.stand();
+        io.emit('status', JSON.stringify(game.data));
+        break;
+      case 'deal':
+        game.deal();
+        io.emit('status', JSON.stringify(game.data));
+        break;
+      default:
+        console.log('なに！？');
+        break;
+    }
+  });
+});
+
+http.listen(3000, function(){
+  console.log('listening on *:3000');
+});

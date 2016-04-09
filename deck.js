@@ -2,7 +2,7 @@
 * @Author: BuptStEve
 * @Date:   2016-04-09 10:13:22
 * @Last Modified by:   BuptStEve
-* @Last Modified time: 2016-04-09 23:12:02
+* @Last Modified time: 2016-04-09 23:27:48
 */
 
 'use strict';
@@ -112,7 +112,6 @@ function Deck(userNum) {
       this.usrPoint = this._calcPoint(this.usrCards);
 
       /* test */
-      console.log('闲家手牌：' + this.usrCards);
       console.log('闲家点数：' + this.usrPoint);
 
       this._changeState();
@@ -186,6 +185,8 @@ function Deck(userNum) {
      * @author BuptStEve
      */
     Deck.prototype._changeState = function() {
+      var tmp;
+
       if (this.usrPoint === 21) {
         // 拿到21点
         this.canHit   = false;
@@ -195,7 +196,7 @@ function Deck(userNum) {
         // bust 庄家胜
         this.canHit   = false;
         this.canStand = false;
-        this.result = -1; // 庄家胜
+        this.result = -3; // 庄家胜
       } else {
         // 未分胜负
         this.canHit   = true;
@@ -203,10 +204,10 @@ function Deck(userNum) {
       }
 
       switch (this.result) {
-        case -1:
+        case -3:
           console.log('庄家胜!');
           this.canDeal = true;
-          this.result = -1;
+          this.result = -3;
           this.data = {
             dc    : this.dlrCards,
             dp    : this.dlrPoint,
@@ -240,11 +241,15 @@ function Deck(userNum) {
             console.log('庄家胜!');
             this.result = -1;
           } else {
+            tmp = this._addCard();
             // 进行庄家加牌操作
-            if (this._addCard() === 21) {
+            if (tmp === 21) {
               // 庄家加牌后也为21点，平局
               console.log('平局!');
               this.result = -2;
+            } else if (tmp === -1) {
+              console.log('闲家胜!');
+              this.result = 2;
             } else {
               console.log('闲家胜!');
               this.result = 1;
@@ -295,8 +300,7 @@ function Deck(userNum) {
         this.dlrPoint = this._calcPoint(this.dlrCards);
 
         /* test */
-        console.log('庄家手牌：' + this.dlrCards);
-        console.log('庄家点数：' + this.dlrCards[0].value + this.dlrCards[1].value);
+        console.log('庄家点数：' + this.dlrPoint);
       }
 
       return this._judgePoint();
