@@ -2,7 +2,7 @@
 * @Author: BuptStEve
 * @Date:   2016-04-09 10:13:22
 * @Last Modified by:   BuptStEve
-* @Last Modified time: 2016-04-09 23:27:48
+* @Last Modified time: 2016-04-10 16:38:03
 */
 
 'use strict';
@@ -10,9 +10,10 @@
 /**
  * 参考资料：
  * 1. http://baike.so.com/doc/5329886-5565060.html#5329886-5565060-2
- * 2. http://www.baike.com/wiki/21点游戏规则
+ * 2. https://zh.wikipedia.org/wiki/廿一點
+ * 3. http://www.baike.com/wiki/21点游戏规则
  *
- * 最简单版本规则：
+ * 进阶版本规则：
  *   0. 暂时一个玩家，庄家是 AI
  *   1. 各发两张牌，庄家第一张不显示
  *   2. 计算点数，如果闲家为 BlackJack 直接获胜
@@ -43,20 +44,34 @@
  * @param  {Number} userNum 玩家数量
  */
 function Deck(userNum) {
-  this.deck     = []; // 一副牌
+  var i, j; // 循环下标，分别表示花色和点数
 
-  this.dlrCards = []; // 庄家手牌
-  this.dlrPoint = 0;  // 庄家的总分
+  // 1. 属性定义
+  this.deck     = [];  // 一副牌
+  this.dlrCards = [];  // 庄家手牌
+  this.dlrPoint = 0;   // 庄家的点数
+  this.usrCards = [];  // 闲家手牌
+  this.usrPoint = 0;   // 闲家的点数
+  this.usrMoney = 100; // 暂定默认100
+  this.btns = {
+    hit  : false,   // 当前玩家可以发出 hit 请求
+    deal : true,    // 当前玩家可以发出 deal 请求
+    stand: false    // 当前玩家可以发出 stand 请求
+  };
+  this.result = 0;  // 当前游戏状态：-3：闲家 bust | -2：平局 | -1：庄家胜 | 0：胜负未分 | 1：闲家胜 | 2：庄家 bust
+  this.data;        // 向客户端传递的信息
 
-  this.usrCards = []; // 闲家手牌
-  this.usrPoint = 0;  // 闲家的总分
-  this.canHit   = false;
-  this.canStand = false;
-  this.canDeal  = true;
-  this.result   = 0;
-  this.data;          // 向客户端传递的信息
+  // 2. 初始化一副牌
+  for (i = 1; i <= 4; i += 1) {
+    for (j = 1; j <= 13; j += 1) {
+      this.deck.push({ suit : i, value: j });
+    }
+  }
 
-  // 定义方法
+  // 3. 随机洗牌
+  this.deck.sort(function() { return 0.5 - Math.random(); });
+
+  // 4. 方法定义
   if (typeof this.deal != "function") {
     /**
      * @desc 开始发牌：1.分别给庄家和玩家发牌 2.判断局势
@@ -64,21 +79,21 @@ function Deck(userNum) {
      * @return {Number} 1：游戏已开始，无法发牌
      */
     Deck.prototype.deal = function() {
-      if (!this.canDeal) { return 1; }
+      if (!this.btns.deal) { return 1; }
 
       // 初始化
-      this.dlrCards = []; // 庄家手牌
-      this.dlrPoint = 0;  // 庄家的总分
-      this.usrCards = []; // 闲家手牌
-      this.usrPoint = 0;  // 闲家的总分
-      this.canHit   = false;
-      this.canStand = false;
-      this.canDeal  = false;
-      this.result   = 0;
+      this.dlrCards   = []; // 庄家手牌
+      this.dlrPoint   = 0;  // 庄家的点数
+      this.usrCards   = []; // 闲家手牌
+      this.usrPoint   = 0;  // 闲家的点数
+      this.usrMoney   = 0;  // 闲家的点数
+      this.btns.hit   = false;
+      this.btns.deal  = false;
+      this.btns.stand = false;
+      this.result     = 0;
 
       // 给庄家发牌
-      this.dlrCards.push(this._draw());
-      this.dlrCards.push(this._draw());
+      this.dlrCards.splice(0, 0, this._draw(), this._draw());
       this.dlrPoint = this._calcPoint(this.dlrCards);
 
       /* test */
@@ -86,8 +101,7 @@ function Deck(userNum) {
       console.log('庄家点数：' + this.dlrCards[0].value + ' ' + this.dlrCards[1].value);
 
       // 给玩家发牌
-      this.usrCards.push(this._draw());
-      this.usrCards.push(this._draw());
+      this.usrCards.splice(0, 0, this._draw(), this._draw());
       this.usrPoint = this._calcPoint(this.usrCards);
 
       /* test */
@@ -106,7 +120,7 @@ function Deck(userNum) {
      */
     Deck.prototype.hit = function() {
       // 当前无法 hit(已经赢了或输了)
-      if (!this.canHit) { return 1; }
+      if (!this.btns.hit) { return 1; }
 
       this.usrCards.push(this._draw());
       this.usrPoint = this._calcPoint(this.usrCards);
@@ -124,38 +138,53 @@ function Deck(userNum) {
      */
     Deck.prototype.stand = function() {
       // 当前无法 stand(已经赢了或输了)
-      if (!this.canStand) { return 1; }
+      if (!this.btns.stand) { return 1; }
 
-      this.canHit   = false;
-      this.canStand = false;
+      this.btns.hit   = false;
+      this.btns.stand = false;
 
       var tmp = this._addCard();
       if (tmp === -1) {
-        console.log('闲家胜！');
         this.result = 2;
       } else {
         if (tmp < this.usrPoint) {
-          console.log(tmp + ' 闲家胜！');
           this.result = 1;
         } else if (tmp > this.usrPoint) {
-          console.log(tmp + ' 庄家胜！');
           this.result = -1;
         } else {
-          console.log('平局！');
           this.result = -2;
         }
       }
-      this.canDeal = true;
-      this.data = {
-        dc    : this.dlrCards,
-        dp    : this.dlrPoint,
-        uc    : this.usrCards,
-        up    : this.usrPoint,
-        hit   : this.canHit,
-        stand : this.canStand,
-        deal  : this.canDeal,
-        result: this.result
-      };
+      this.btns.deal = true;
+
+      this._genData();
+    };
+
+    /**
+     * @desc 根据 this.result 的情况生成 this.data
+     * @author BuptStEve
+     */
+    Deck.prototype._genData = function() {
+      if (this.result) {
+        //  胜负已分
+        this.data = {
+          dc    : this.dlrCards,
+          dp    : this.dlrPoint,
+          uc    : this.usrCards,
+          up    : this.usrPoint,
+          btns  : this.btns,
+          result: this.result
+        };
+      } else {
+        //  胜负未分
+        this.data = {
+          dc    : this.dlrCards.slice(1),
+          uc    : this.usrCards,
+          up    : this.usrPoint,
+          btns  : this.btns,
+          result: this.result
+        };
+      }
     };
 
     /**
@@ -167,17 +196,12 @@ function Deck(userNum) {
 
       for (i = 1; i <= 4; i += 1) {
         for (j = 1; j <= 13; j += 1) {
-          this.deck.push({
-            suit : i, // 花色
-            value: j  // 值
-          });
+          this.deck.push({ suit : i, value: j });
         }
       }
 
       // 随机洗牌
       this.deck.sort(function() { return 0.5 - Math.random(); });
-
-      return this;
     };
 
     /**
@@ -189,83 +213,51 @@ function Deck(userNum) {
 
       if (this.usrPoint === 21) {
         // 拿到21点
-        this.canHit   = false;
-        this.canStand = false;
+        this.btns.hit   = false;
+        this.btns.stand = false;
         this.result = 1; // 暂时选择闲家胜
       } else if (this.usrPoint > 21) {
         // bust 庄家胜
-        this.canHit   = false;
-        this.canStand = false;
+        this.btns.hit   = false;
+        this.btns.stand = false;
         this.result = -3; // 庄家胜
       } else {
         // 未分胜负
-        this.canHit   = true;
-        this.canStand = true;
+        this.btns.hit   = true;
+        this.btns.stand = true;
       }
 
       switch (this.result) {
         case -3:
-          console.log('庄家胜!');
-          this.canDeal = true;
+          this.btns.deal = true;
           this.result = -3;
-          this.data = {
-            dc    : this.dlrCards,
-            dp    : this.dlrPoint,
-            uc    : this.usrCards,
-            up    : this.usrPoint,
-            hit   : this.canHit,
-            stand : this.canStand,
-            deal  : this.canDeal,
-            result: this.result
-          };
+          this._genData();
           break;
         case 0:
           // 等待闲家进一步操作
-          this.data = {
-            dc   : this.dlrCards.slice(1),
-            uc   : this.usrCards,
-            up   : this.usrPoint,
-            hit  : this.canHit,
-            stand: this.canStand,
-            deal : this.canDeal,
-            result: this.result
-          };
+          this._genData();
           break;
         case 1:
           if (this.usrCards.length === 2) {
             // 第一轮拿到 BlackJack
-            console.log('闲家胜!');
             this.result = 1;
           } else if (this.dlrPoint === 21) {
             // 闲家凑齐21点，庄家为 BlackJack
-            console.log('庄家胜!');
             this.result = -1;
           } else {
             tmp = this._addCard();
             // 进行庄家加牌操作
             if (tmp === 21) {
               // 庄家加牌后也为21点，平局
-              console.log('平局!');
               this.result = -2;
             } else if (tmp === -1) {
-              console.log('闲家胜!');
               this.result = 2;
             } else {
-              console.log('闲家胜!');
               this.result = 1;
             }
           }
-          this.canDeal = true;
-          this.data = {
-            dc    : this.dlrCards,
-            dp    : this.dlrPoint,
-            uc    : this.usrCards,
-            up    : this.usrPoint,
-            hit   : this.canHit,
-            stand : this.canStand,
-            deal  : this.canDeal,
-            result: this.result
-          };
+          this.btns.deal = true;
+          this._genData();
           break;
         default:
           console.log('error!');

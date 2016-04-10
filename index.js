@@ -2,14 +2,14 @@
 * @Author: BuptStEve
 * @Date:   2016-04-08 21:19:39
 * @Last Modified by:   BuptStEve
-* @Last Modified time: 2016-04-09 23:15:38
+* @Last Modified time: 2016-04-10 16:37:58
 */
 
 var app  = require('express')(),
     http = require('http').Server(app),
     io   = require('socket.io')(http),
     Deck = require('./deck'),
-    game = new Deck()._newDeck().deal();
+    game = new Deck().deal();
 
 app.get('/', function(req, res){
   res.sendFile(__dirname + '/index.html');

@@ -33,9 +33,9 @@
         $("#usrCards .cards").innerHTML = deck.uc.txt;
         $("#usrCards .point").innerHTML = deck.up;
 
-        $("#hit").disabled = !deck.hit;
-        $("#stand").disabled = !deck.stand;
-        $("#deal").disabled = !deck.deal;
+        $("#hit").disabled = !deck.btns.hit;
+        $("#deal").disabled = !deck.btns.deal;
+        $("#stand").disabled = !deck.btns.stand;
 
         switch(deck.result) {
           case -3:
@@ -93,7 +93,7 @@
               dk.dc.txt += '方块' + dk.dc[i].value + ' ';
               break;
             default:
-              alert('なに！？');
+              console.log('なに！？');
               break;
           }
         }
@@ -113,11 +113,10 @@
               dk.uc.txt += '方块' + dk.uc[i].value + ' ';
               break;
             default:
-              alert('なに！？');
+              console.log('なに！？');
               break;
           }
         }
-
       }
 
     </script>
