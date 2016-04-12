@@ -1,124 +1,293 @@
 <!doctype html>
-<html>
-  <head>
-    <title>test BlackJack</title>
-    <style>
-    </style>
-  </head>
-  <body>
-    <div id="dlrCards">
-      <div class="cards"></div>
-    </div>
-    <div id="usrCards">
-      <div class="cards"></div>
-      <div class="point"></div>
-    </div>
+<html lang="zh-CN">
+<head>
+  <title>blackjack demo</title>
+  <meta charset="UTF-8">
 
-    <button id="hit">hit</button>
-    <button id="stand">stand</button>
-    <button id="deal">deal</button>
+  <style>
+    * {padding: 0; margin: 0; list-style: none;}
+    html, body, main { width: 100%; height: 100%; }
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-      var socket = io(),
-          $ = function(el) { return document.querySelector(el); },
-          deck;
+    main {
+      background-color: #669a40;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
 
+    #info {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 25%;
+      width: 50%;
+      margin-top: -30px;
+      height: 30px;
+      line-height: 30px;
+      text-align: center;
+      background: #eee;
+      border-radius: 5px;
+    }
+
+    section {
+      flex: 1 1 auto;
+    }
+
+    .table {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    #pocket {
+      position: absolute;
+      top: 50px;
+      left: 50px;
+
+      display: flex;
+      flex-direction: column;
+      width: 100px;
+      border: 1px solid white;
+      padding: 5px;
+      border-radius: 5px;
+      color: white;
+      background: rgba(0, 0, 0, .5);
+    }
+
+    #actions {
+      position: absolute;
+      bottom: 50px;
+      left: 50px;
+
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 300px;
+    }
+
+    .rules {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .rules > img {
+      width: 70%;
+    }
+
+    #dealer, #player {
+      /*border: 1px solid black;*/
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #dlrCards, #plrCards {
+      display: flex;
+      flex: 0 1 auto;
+    }
+
+    .card {
+      flex: 1 1 100px;
+      width: 80px;
+      height: 100px;
+      background: white;
+      border-radius: 5px;
+      position: relative;
+      border: 1px solid black;
+    }
+    .card.red { color: red; }
+
+    /*庄家第一张牌*/
+    .down { background-color: grey; }
+
+    .pos-lt, .pos-rb { position: absolute; }
+
+    .pos-lt {
+      top: 3px;
+      left: 3px;
+    }
+
+    .pos-rb {
+      bottom: 3px;
+      right: 3px;
+    }
+
+  </style>
+</head>
+<body>
+  <main>
+    <!-- 悬浮显示：现金、赌注 -->
+    <section id="pocket">
+      <label for="money">Money</label>
+      <input id="money" value="100" disabled />
+      <label for="bet">Bet</label>
+      <input type="number" id="bet" value="10" />
+    </section>
+
+    <!-- 悬浮显示：游戏结果 -->
+    <section id="info"></section>
+
+    <!-- 悬浮显示：玩家操作区 -->
+    <section id="actions">
+      <button id="deal" class="btn" type="button">deal</button>
+      <button id="hit" class="btn" type="button">hit</button>
+      <button id="stand" class="btn" type="button">stand</button>
+      <button id="double" class="btn" type="button">double</button>
+      <button id="surrender" class="btn" type="button">surrender</button>
+    </section>
+
+    <!-- 桌面 -->
+    <section class="table">
+
+      <!-- 庄家手牌 -->
+      <section id="dealer">
+        <ul id="dlrCards"></ul>
+      </section>
+
+      <!-- 规则（本来应该用 SVG 或者 canvas 实现不过时间不够） -->
+      <section class="rules">
+        <img src="img/rules.jpg" alt="rules">
+      </section>
+
+      <!-- 闲家手牌 -->
+      <section id="player">
+        <ul id="plrCards"></ul>
+      </section>
+
+    </section>
+  </main>
+
+  <!-- scripts -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    var socket = io(),
+        $ = function(el) { return document.querySelector(el); };
+
+    window.onload = function() {
       socket.on('status', function(msg){
-        deck = JSON.parse(msg);
-        prettyDeck(deck);
-        console.log(msg);
+        console.log(msg); /* test */
 
-        $("#dlrCards .cards").innerHTML = deck.dc.txt;
-        $("#usrCards .cards").innerHTML = deck.uc.txt;
-        $("#usrCards .point").innerHTML = deck.up;
-
-        $("#hit").disabled = !deck.btns.hit;
-        $("#deal").disabled = !deck.btns.deal;
-        $("#stand").disabled = !deck.btns.stand;
-
-        switch(deck.result) {
-          case -3:
-            console.log('由于闲家'  + deck.up + '点 bust ' + '庄家胜');
-            break;
-          case -2:
-            console.log('平局' + deck.dp);
-            break;
-          case -1:
-            console.log('庄家' + deck.dp + '点 胜 闲家 ' + deck.up + '点');
-            break;
-          case 0:
-            break;
-          case 1:
-            console.log('闲家' + deck.up + '点 胜 庄家 ' + deck.dp + '点');
-            break;
-          case 2:
-            console.log('由于庄家'  + deck.dp + '点 bust ' + '闲家胜');
-            break;
-          default:
-            alert('なに！？');
-            break;
-        }
+        displayState(JSON.parse(msg));
       });
 
-      $("#hit").addEventListener('click', function(){
-        socket.emit('blackjack', 'hit');
+      socket.on('error', function(msg) { alert(msg); });
+
+      $("#actions").addEventListener('click', function(e){
+        // console.log(e.target.id);
+
+        switch (e.target.id) {
+          case 'deal':
+            socket.emit('blackjack', 'deal ' + $("#bet").value);
+            break;
+          case 'hit':
+            socket.emit('blackjack', 'hit');
+            break;
+          case 'stand':
+            socket.emit('blackjack', 'stand');
+            break;
+          case 'double':
+            socket.emit('blackjack', 'double');
+            break;
+          case 'surrender':
+            socket.emit('blackjack', 'surrender');
+            break;
+          default:
+            break;
+        }
       }, false);
+    }
 
-      $("#stand").addEventListener('click', function(){
-        socket.emit('blackjack', 'stand');
-      }, false);
+    /**
+     * @desc 将数据转换为具体的界面显示
+     * @author BuptStEve
+     * @param {Object} state
+     * @return {null} null
+     */
+    function displayState(state) {
+      var i, len, msg, cardStr, cardClass, docFrag,
+          dlrCards = $("#dlrCards"),
+          plrCards = $("#plrCards"),
+          info     = $("#info");
 
-      $("#deal").addEventListener('click', function(){
-        socket.emit('blackjack', 'deal');
-      }, false);
+      // 1.按钮状态
+      $("#hit").disabled       = !state.btns.hit;
+      $("#deal").disabled      = !state.btns.deal;
+      $("#stand").disabled     = !state.btns.stand;
+      $("#double").disabled    = !state.btns.double;
+      $("#surrender").disabled = !state.btns.surrender;
 
-      function prettyDeck(dk) {
-        var i, len;
-        dk.dc.txt = '';
-        dk.uc.txt = '';
+      // 2.内容显示
+      $("#bet").value   = state.bet;
+      $("#money").value = state.money;
 
-        for (i = 0, len = dk.dc.length; i < len; i += 1) {
-          switch(dk.dc[i].suit) {
-            case 1:
-              dk.dc.txt += '黑桃' + dk.dc[i].value + ' ';
-              break;
-            case 2:
-              dk.dc.txt += '红桃' + dk.dc[i].value + ' ';
-              break;
-            case 3:
-              dk.dc.txt += '梅花' + dk.dc[i].value + ' ';
-              break;
-            case 4:
-              dk.dc.txt += '方块' + dk.dc[i].value + ' ';
-              break;
-            default:
-              console.log('なに！？');
-              break;
-          }
+      /**
+       * 3. 展示卡牌
+       * -- template --
+        <li class="card red">
+          <div class="pos-lt">
+            <span class="rank">1</span><span class="suit">♥</span>
+          </div>
+          <div class="pos-rb">
+            <span class="rank">1</span><span class="suit">♥</span>
+          </div>
+        </li>
+       */
+      docFrag = '';
+      state.dc.map(function(elt) {
+        cardClass = (elt.suit === '♥' || elt.suit === '◆') ? 'card red' : 'card';
+        if (elt.suit != '*') {
+          cardStr = '<li class="' + cardClass + '">' +
+                      '<div class="pos-lt">' +
+                        '<span class="rank">' + elt.rank + '</span>' +
+                        '<span class="suit">' + elt.suit + '</span>' +
+                      '</div>' +
+                      '<div class="pos-rb">' +
+                        '<span class="rank">' + elt.rank + '</span>' +
+                        '<span class="suit">' + elt.suit + '</span>' +
+                      '</div>' +
+                    '</li>';
+        } else {
+          cardStr = '<li class="card down"></li>';
         }
 
-        for (i = 0, len = dk.uc.length; i < len; i += 1) {
-          switch(dk.uc[i].suit) {
-            case 1:
-              dk.uc.txt += '黑桃' + dk.uc[i].value + ' ';
-              break;
-            case 2:
-              dk.uc.txt += '红桃' + dk.uc[i].value + ' ';
-              break;
-            case 3:
-              dk.uc.txt += '梅花' + dk.uc[i].value + ' ';
-              break;
-            case 4:
-              dk.uc.txt += '方块' + dk.uc[i].value + ' ';
-              break;
-            default:
-              console.log('なに！？');
-              break;
-          }
-        }
+        docFrag += cardStr;
+      });
+      dlrCards.innerHTML = docFrag;
+
+      docFrag = '';
+      state.pc.map(function(elt) {
+        cardClass = (elt.suit === '♥' || elt.suit === '◆') ? 'card red' : 'card';
+
+        cardStr = '<li class="' + cardClass + '">' +
+                    '<div class="pos-lt">' +
+                      '<span class="rank">' + elt.rank + '</span>' +
+                      '<span class="suit">' + elt.suit + '</span>' +
+                    '</div>' +
+                    '<div class="pos-rb">' +
+                      '<span class="rank">' + elt.rank + '</span>' +
+                      '<span class="suit">' + elt.suit + '</span>' +
+                    '</div>' +
+                  '</li>';
+
+        docFrag += cardStr;
+      });
+      plrCards.innerHTML = docFrag;
+
+      // 4.显示结果
+      if (!state.result) {
+        info.style.display = 'none';
+      } else {
+        info.style.display = 'block';
+        info.innerText = state.resultText;
       }
 
-    </script>
-  </body>
+      // 5.安利保险
+      if (!!state.btns.insurance && confirm('是否买保险？')) {
+        socket.emit('blackjack', 'insurance');
+      }
+    }
+
+  </script>
+</body>
 </html>
