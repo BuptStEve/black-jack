@@ -2,7 +2,7 @@
 * @Author: BuptStEve
 * @Date:   2016-04-09 10:13:22
 * @Last Modified by:   BuptStEve
-* @Last Modified time: 2016-04-12 16:06:34
+* @Last Modified time: 2016-04-13 21:14:48
 */
 
 'use strict';
@@ -13,9 +13,9 @@
  * 2. https://zh.wikipedia.org/wiki/廿一點
  * 3. http://www.baike.com/wiki/21点游戏规则
  *
- * 进阶版本规则：
- *   0. 暂时一个闲家，庄家是 AI，本金暂定 100
- *   1. 首先开始下注（bet 默认 10），点击 deal 按钮扣掉赌注后开始游戏
+ * 双人版本规则：
+ *   0. 第一个点 deal 的作为闲家，另一个为庄家，本金暂定 100
+ *   1. 首先闲家开始下注（bet 默认 10），点击 deal 按钮扣掉赌注后开始游戏
  *   2. 给每人各发两张牌，庄家第一张不显示
  *   3. 计算点数，如果闲家为 BlackJack 直接获胜 bet*2.5
  *   4. 否则若庄家明牌为 Ace 那么闲家买保险的选择(insurance = bet*0.5)
@@ -44,9 +44,6 @@
  *        3：闲家 blackjack
  *        4: 闲家买保险成功
  *        5: 闲家 double 成功
- *      * this.data 分两种情况：
- *        胜负未分：不含庄家第一张牌和庄家点数
- *        胜负已分：含庄家第一张牌和庄家点数
  */
 
 /**
@@ -59,23 +56,44 @@ function Deck() {
 
   // 1. 属性定义
   this.deck         = [];  // 一副牌
+  this.dealer       = 0;   // 当前哪个玩家为庄家
   this.dlrCards     = [];  // 庄家手牌
   this.dlrPoint     = 0;   // 庄家的点数
+
   this.plrCards     = [];  // 闲家手牌
   this.plrPoint     = 0;   // 闲家的点数
   this.plrBet       = 10;  // 闲家赌注，默认10
-  this.plrMoney     = 100; // 闲家金钱，暂定100
   this.plrInsurance = 0;   // 闲家保险
+
+  this.plrMoney     = [100, 100];  // 用户的金钱
   this.btns = {
     hit      : false,      // 当前可以 hit
-    deal     : true,       // 当前可以 deal
+    deal     : true,      // 当前可以 deal
     stand    : false,      // 当前可以 stand
     double   : false,      // 当前可以 double
     surrender: false,      // 当前可以 surrender
     insurance: false       // 当前可以 insurance
   };
   this.result = 0;         // 当前游戏状态
-  this.data;               // 向客户端传递的信息
+  this.dlrData;            // 向庄家传递的信息
+  this.plrData = {         // 向闲家传递的信息
+    dc  : [],
+    pc  : [],
+    pp  : this.plrPoint,
+    bet : this.plrBet,
+    btns: {
+      hit      : false,
+      deal     : false,
+      stand    : false,
+      double   : false,
+      surrender: false,
+      insurance: false
+    },
+    dm  : this.plrMoney[this.dealer],
+    pm  : this.plrMoney[+!this.dealer],
+    re  : -2,
+    rt  : '等待另一位玩家进入房间'
+  };
 
   // 2. 初始化一副牌
   for (i = 0; i < 4; i += 1) {
@@ -94,15 +112,26 @@ function Deck() {
      * @author BuptStEve
      */
     Deck.prototype.init = function() {
-      this.data = {
-        dc        : this._num2Rank(this.dlrCards),
-        pc        : this._num2Rank(this.plrCards),
-        pp        : this.plrPoint,
-        bet       : this.plrBet,
-        btns      : this.btns,
-        money     : this.plrMoney,
-        result    : this.result,
-        resultText: ''
+      this.plrData = {
+        dc  : [],
+        pc  : [],
+        pp  : this.plrPoint,
+        bet : this.plrBet,
+        btns: this.btns,
+        dm  : this.plrMoney[this.dealer],
+        pm  : this.plrMoney[+!this.dealer],
+        re  : this.result,
+        rt  : ''
+      };
+      this.dlrData = {
+        btns: {
+          hit      : false,
+          deal     : false,
+          stand    : false,
+          double   : false,
+          surrender: false,
+          insurance: false
+        }
       };
 
       return this;
@@ -112,28 +141,31 @@ function Deck() {
      * @desc 开始发牌：1.分别给庄家和闲家发牌 2.判断局势
      * @author BuptStEve
      * @param  {Number} bet 闲家的赌注
+     * @param  {Number} num 闲家下标
      * @return {Number} 1：游戏已开始，无法发牌
      */
-    Deck.prototype.deal = function(bet) {
+    Deck.prototype.deal = function(bet, num) {
       if (!this.btns.deal) { return 0; }
 
-      bet = parseInt(bet);
+      bet = parseInt(bet, 10);
 
       // 初始化
-      this.dlrCards       = [];   // 庄家手牌
-      this.dlrPoint       = 0;    // 庄家的点数
-      this.plrCards       = [];   // 闲家手牌
-      this.plrPoint       = 0;    // 闲家的点数
-      this.plrBet         = bet;  // 闲家的赌注
-      this.plrMoney       -= bet; // 闲家的金钱
-      this.plrInsurance   = 0;    // 闲家的保险
-      this.btns.hit       = false;
-      this.btns.deal      = false;
-      this.btns.stand     = false;
-      this.btns.double    = this.judgeDouble();
-      this.btns.surrender = false;
-      this.btns.insurance = false;
-      this.result         = 0;
+      this.dlrCards        = [];    // 庄家手牌
+      this.dlrPoint        = 0;     // 庄家的点数
+      this.plrCards        = [];    // 闲家手牌
+      this.plrPoint        = 0;     // 闲家的点数
+      this.plrBet          = bet;   // 闲家的赌注
+      this.dealer          = +!num; // 庄家下标
+      this.plrMoney[num]   -= bet;  // 闲家的金钱
+      this.plrMoney[+!num] += bet;  // 庄家的金钱
+      this.plrInsurance    = 0;     // 闲家的保险
+      this.btns.hit        = false;
+      this.btns.deal       = false;
+      this.btns.stand      = false;
+      this.btns.double     = this.judgeDouble();
+      this.btns.surrender  = false;
+      this.btns.insurance  = false;
+      this.result          = 0;
 
       // 给庄家发牌
       this.dlrCards.splice(0, 0, this._draw(), this._draw());
@@ -151,16 +183,15 @@ function Deck() {
     /**
      * @desc 验证赌注金额
      * @author BuptStEve
-     * @param  {Number}  bet 闲家的赌注
+     * @param  {Number} bet 闲家的赌注
+     * @param  {Number} num 闲家下标
      * @return {Boolean}
      */
-    Deck.prototype.judgeBet = function(bet) {
-      bet = parseInt(bet);
-      if (bet <= 0) {
-        return false;
-      }
+    Deck.prototype.judgeBet = function(bet, num) {
+      bet = parseInt(bet, 10);
+      if (bet <= 0) { return false; }
 
-      return this.plrMoney - bet >= 0 ? true : false;
+      return this.plrMoney[num] - bet >= 0 ? true : false;
     };
 
     /**
@@ -222,7 +253,8 @@ function Deck() {
     Deck.prototype.double = function() {
       if (!this.btns.double) { return 0; }
 
-      this.plrMoney -= this.plrBet; // 先减去 bet 更好计算
+      this.plrMoney[+!this.dealer] -= this.plrBet; // 先减去 bet 更好计算
+      this.plrMoney[this.dealer]   += this.plrBet;
       this.plrBet *= 2;             // 双倍 bet
 
       this._changeState(true);
@@ -280,7 +312,7 @@ function Deck() {
      * @return {Boolean}
      */
     Deck.prototype._judgeInsurance = function() {
-      return this.plrMoney - Math.ceil(this.plrBet*0.5) >= 0 ? true : false;
+      return this.plrMoney[+!this.dealer] - Math.ceil(this.plrBet*0.5) >= 0 ? true : false;
     };
 
     /**
@@ -289,7 +321,7 @@ function Deck() {
      * @return {Boolean}
      */
     Deck.prototype.judgeDouble = function() {
-      return this.plrMoney - this.plrBet >= 0 ? true : false;
+      return this.plrMoney[+!this.dealer] - this.plrBet >= 0 ? true : false;
     };
 
     /**
@@ -404,68 +436,82 @@ function Deck() {
     Deck.prototype._genData = function() {
       var tmp = this.dlrCards.slice(1);
       tmp.unshift({ suit: '*', rank: '*' });
-      this.data.dc     = this._num2Rank(this.dlrCards);
-      this.data.pc     = this._num2Rank(this.plrCards);
-      this.data.dp     = this.dlrPoint;
-      this.data.pp     = this.plrPoint;
-      this.data.bet    = 10; // 分出胜负后，返回默认值
-      this.data.result = this.result;
+
+      this.plrData.dc = this.dlrData.dc = this._num2Rank(this.dlrCards);
+      this.plrData.pc = this.dlrData.pc = this._num2Rank(this.plrCards);
+      this.plrData.dp = this.plrData.dp = this.dlrPoint;
+      this.plrData.pp = this.plrData.pp = this.plrPoint;
+      this.plrData.re = this.dlrData.re = this.result;
+      this.plrData.bet = this.dlrData.bet = 10; // 分出胜负后，返回默认值
+      this.dlrData.btns.deal = true; // 分出胜负后可以 deal
 
       switch (this.result) {
         case -6:
-          this.data.resultText = '闲家 double 失败';
+          this.plrData.rt = this.dlrData.rt = '闲家 double 失败';
+          this.plrMoney[this.dealer] += this.plrBet * 2; // 庄家赢得赌注
           break;
         case -5:
-          this.data.resultText = '闲家投降';
-          this.plrMoney += Math.floor(this.plrBet*0.5); // 投降输一半
+          this.plrData.rt = this.dlrData.rt = '闲家投降';
+          tmp = Math.floor(this.plrBet*0.5);
+          this.plrMoney[+!this.dealer] += tmp; // 投降输一半
+          this.plrMoney[this.dealer]   -= tmp;
           break;
         case -4:
-          this.data.resultText = '闲家买保险失败';
-          this.plrMoney -= this.plrInsurance;
+          this.plrData.rt = this.dlrData.rt = '闲家买保险失败';
+          this.plrMoney[+!this.dealer] -= this.plrInsurance;
+          this.plrMoney[this.dealer]   += this.plrInsurance;
           break;
         case -3:
-          this.data.resultText = '闲家' + this.plrPoint + '点 bust ' + '庄家胜';
+          this.plrData.rt = this.dlrData.rt = '闲家' + this.plrPoint + '点 bust ' + '庄家胜';
           break;
         case -2:
-          this.data.resultText = this.plrPoint + '点 平局';
-          this.plrMoney += this.plrBet;
+          this.plrData.rt = this.dlrData.rt = this.plrPoint + '点 平局';
+          this.plrMoney[+!this.dealer] += this.plrBet;
+          this.plrMoney[this.dealer]   -= this.plrBet;
           break;
         case -1:
-          this.data.resultText = '庄家' + this.dlrPoint + '点 胜 闲家' + this.plrPoint + '点';
+          this.plrData.rt = this.dlrData.rt = '庄家' + this.dlrPoint + '点 胜 闲家' + this.plrPoint + '点';
           break;
         case 0:
           // 胜负未分
-          this.data.dc  = this._num2Rank(tmp);
-          this.data.bet = this.plrBet;
-          delete this.data.dp;
-          this.data.resultText = '';
+          this.plrData.dc  = this._num2Rank(tmp);
+          this.plrData.bet = this.plrBet;
+          this.dlrData.btns.deal = false;
+          delete this.plrData.dp;
+          this.plrData.rt = this.dlrData.rt = '';
           break;
         case 1:
-          this.data.resultText = '闲家' + this.plrPoint + '点 胜 庄家' + this.dlrPoint + '点';
-          this.plrMoney += this.plrBet * 2;
+          this.plrData.rt = this.dlrData.rt = '闲家' + this.plrPoint + '点 胜 庄家' + this.dlrPoint + '点';
+          this.plrMoney[+!this.dealer] += this.plrBet * 2;
+          this.plrMoney[this.dealer]   -= this.plrBet * 2;
           break;
         case 2:
-          this.data.resultText = '庄家'  + this.dlrPoint + '点 bust ' + '闲家胜';
-          this.plrMoney += this.plrBet * 2;
+          this.plrData.rt = this.dlrData.rt = '庄家'  + this.dlrPoint + '点 bust ' + '闲家胜';
+          this.plrMoney[+!this.dealer] += this.plrBet * 2;
+          this.plrMoney[this.dealer]   -= this.plrBet * 2;
           break;
         case 3:
-          this.data.resultText = '闲家胜 BlackJack';
-          this.plrMoney += Math.floor(this.plrBet * 2.5);
+          this.plrData.rt = this.dlrData.rt = '闲家胜 BlackJack';
+          this.plrMoney[+!this.dealer] += Math.floor(this.plrBet * 2.5);
+          this.plrMoney[this.dealer]   -= Math.floor(this.plrBet * 2.5);
           break;
         case 4:
-          this.data.resultText = '闲家买保险成功';
-          this.plrMoney += this.plrBet;
+          this.plrData.rt = this.dlrData.rt = '闲家买保险成功';
+          this.plrMoney[+!this.dealer] += this.plrBet;
+          this.plrMoney[this.dealer]   -= this.plrBet;
           break;
         case 5:
-          this.data.resultText = '闲家 double 成功';
-          this.plrMoney += this.plrBet * 2;
+          this.plrData.rt = this.dlrData.rt = '闲家 double 成功';
+          this.plrMoney[+!this.dealer] += this.plrBet * 2;
+          this.plrMoney[this.dealer]   -= this.plrBet * 2;
           break;
         default:
           console.log('なに！？');
           break;
       }
 
-      this.data.money  = this.plrMoney;
+      this.plrData.pm = this.dlrData.pm = this.plrMoney[+!this.dealer];
+      this.plrData.dm = this.dlrData.dm = this.plrMoney[this.dealer];
     };
 
     /**

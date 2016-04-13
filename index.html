@@ -55,15 +55,13 @@
     }
 
     #actions {
-      position: absolute;
-      bottom: 50px;
-      left: 50px;
-
       display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      height: 300px;
+      flex: 0 1 50px;
     }
+    #actions button {
+      flex: 1 1 auto;
+    }
+    #deal { order: -1; }
 
     .rules {
       display: flex;
@@ -71,9 +69,7 @@
       justify-content: center;
     }
 
-    .rules > img {
-      width: 70%;
-    }
+    .rules > img { width: 70%; }
 
     #dealer, #player {
       /*border: 1px solid black;*/
@@ -119,23 +115,16 @@
   <main>
     <!-- 悬浮显示：现金、赌注 -->
     <section id="pocket">
-      <label for="money">Money</label>
-      <input id="money" value="100" disabled />
+      <label for="plrMoney">Player's Money</label>
+      <input id="plrMoney" value="100" disabled />
+      <label for="dlrMoney">Dealer's Money</label>
+      <input id="dlrMoney" value="100" disabled />
       <label for="bet">Bet</label>
       <input type="number" id="bet" value="10" />
     </section>
 
     <!-- 悬浮显示：游戏结果 -->
     <section id="info"></section>
-
-    <!-- 悬浮显示：玩家操作区 -->
-    <section id="actions">
-      <button id="deal" class="btn" type="button">deal</button>
-      <button id="hit" class="btn" type="button">hit</button>
-      <button id="stand" class="btn" type="button">stand</button>
-      <button id="double" class="btn" type="button">double</button>
-      <button id="surrender" class="btn" type="button">surrender</button>
-    </section>
 
     <!-- 桌面 -->
     <section class="table">
@@ -155,6 +144,14 @@
         <ul id="plrCards"></ul>
       </section>
 
+      <!-- 底部显示：玩家操作区 -->
+      <section id="actions">
+        <button id="hit" class="btn" type="button" disabled>hit</button>
+        <button id="deal" class="btn" type="button" disabled>deal</button>
+        <button id="stand" class="btn" type="button" disabled>stand</button>
+        <button id="double" class="btn" type="button" disabled>double</button>
+        <button id="surrender" class="btn" type="button" disabled>surrender</button>
+      </section>
     </section>
   </main>
 
@@ -196,7 +193,7 @@
             break;
         }
       }, false);
-    }
+    };
 
     /**
      * @desc 将数据转换为具体的界面显示
@@ -218,8 +215,9 @@
       $("#surrender").disabled = !state.btns.surrender;
 
       // 2.内容显示
-      $("#bet").value   = state.bet;
-      $("#money").value = state.money;
+      $("#bet").value      = state.bet;
+      $("#plrMoney").value = state.pm;
+      $("#dlrMoney").value = state.dm;
 
       /**
        * 3. 展示卡牌
@@ -275,11 +273,11 @@
       plrCards.innerHTML = docFrag;
 
       // 4.显示结果
-      if (!state.result) {
+      if (!state.re) {
         info.style.display = 'none';
       } else {
         info.style.display = 'block';
-        info.innerText = state.resultText;
+        info.innerText = state.rt;
       }
 
       // 5.安利保险
