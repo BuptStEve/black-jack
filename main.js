@@ -2,7 +2,7 @@
 * @Author: BuptStEve
 * @Date:   2016-04-08 21:19:39
 * @Last Modified by:   BuptStEve
-* @Last Modified time: 2016-04-12 16:06:04
+* @Last Modified time: 2016-04-13 21:05:41
 */
 
 var express = require('express'),
@@ -10,65 +10,106 @@ var express = require('express'),
     http    = require('http').Server(app),
     io      = require('socket.io')(http),
     Deck    = require('./deck'),
-    game    = new Deck().init();
+    roomInfo = {
+      len  : 2, // 限制人数
+      game : new Deck(),
+      users: [] // 用户列表
+    };
 
-app.use('/img', express.static(__dirname + '/img'));
+app.use('/img', express.static(__dirname + '/img')); // 静态资源
 
 app.get('/', function(req, res){
   res.sendFile(__dirname + '/index.html');
 });
 
 io.on('connection', function(socket){
-  io.emit('status', JSON.stringify(game.data));
+  console.log(socket.id + ' connected...');
 
-  socket.on('blackjack', function(msg){
-    var tmp = msg.split(' ');
+  if (roomInfo.users.length < roomInfo.len) {
+    roomInfo.users.push(socket);
+    socket.join('players'); // 加入玩家房间
+    console.log(socket.id + ' join players\' room...');
+    io.to('players').emit('status', JSON.stringify(roomInfo.game.plrData));
 
-    switch(tmp[0]) {
-      case 'hit':
-        if (!game.hit()) {
-          io.emit('error', '请不要调皮...');
-        }
-        break;
+    // 客户端发来的 actions
+    socket.on('blackjack', function(msg){
+      console.log(socket.id + ' send a msg...');
+      console.log('users: ' + roomInfo.users[0].id + ' ' + roomInfo.users[1].id);
 
-      case 'deal':
-        if (!game.judgeBet(tmp[1])) {
-          io.emit('error', 'bet 值不合法，请检查...');
-        } else if (!game.deal(tmp[1])) {
-          io.emit('error', '请不要调皮...');
-        }
-        break;
+      var tmp = msg.split(' '),
+          num = roomInfo.users.indexOf(socket); // 闲家的下标
 
-      case 'stand':
-        if (!game.stand()) {
-          io.emit('error', '请不要调皮...');
-        }
-        break;
+      if (num === -1) { return false; }
 
-      case 'double':
-        if (!game.judgeDouble() || !game.double()) {
-          io.emit('error', '请不要调皮...');
-        }
-        break;
+      switch(tmp[0]) {
+        case 'deal':
+          if (!roomInfo.game.judgeBet(tmp[1], num)) {
+            socket.emit('error', 'bet 值不合法，请检查...');
+          } else if (!roomInfo.game.deal(tmp[1], num)) {
+            socket.emit('error', '请不要调皮...');
+          } else {
+            roomInfo.users.map(function(x) {
+              if (x.id === socket.id) {
+                x.leave('dealer');
+                x.join('players');
+              } else {
+                x.leave('players');
+                x.join('dealer');
+              }
+            });
+          }
+          break;
+        case 'hit':
+          if (!roomInfo.game.hit()) {
+            io.to('players').emit('error', '请不要调皮...');
+          }
+          break;
+        case 'stand':
+          if (!roomInfo.game.stand()) {
+            io.to('players').emit('error', '请不要调皮...');
+          }
+          break;
+        case 'double':
+          if (!roomInfo.game.judgeDouble() || !roomInfo.game.double()) {
+            io.to('players').emit('error', '请不要调皮...');
+          }
+          break;
+        case 'insurance':
+          if (!roomInfo.game.insurance()) {
+            io.to('players').emit('error', '请不要调皮...');
+          }
+          break;
+        case 'surrender':
+          if (!roomInfo.game.surrender()) {
+            io.to('players').emit('error', '请不要调皮...');
+          }
+          break;
+        default:
+          console.log('なに！？');
+          break;
+      }
 
-      case 'insurance':
-        if (!game.insurance()) {
-          io.emit('error', '请不要调皮...');
-        }
-        break;
+      io.to('dealer').emit('status', JSON.stringify(roomInfo.game.dlrData));
+      io.to('players').emit('status', JSON.stringify(roomInfo.game.plrData));
+    });
+  }
 
-      case 'surrender':
-        if (!game.surrender()) {
-          io.emit('error', '请不要调皮...');
-        }
-        break;
+  if (roomInfo.users.length === roomInfo.len) {
+    roomInfo.game.init(); // 初始化
+    io.to('players').emit('status', JSON.stringify(roomInfo.game.plrData));
+  }
 
-      default:
-        console.log('なに！？');
-        break;
+  socket.on('disconnect', function () {
+    var index = roomInfo.users.indexOf(socket);
+    console.log(socket.id + ' disconnected...');
+
+    if (index !== -1) {
+      roomInfo.users.splice(index, 1);
+      roomInfo.game = new Deck();
+      io.to('players').emit('status', JSON.stringify(roomInfo.game.plrData));
+      socket.leave('players'); // 退出房间
+      socket.leave('dealer'); // 退出房间
     }
-
-    io.emit('status', JSON.stringify(game.data));
   });
 });
 
