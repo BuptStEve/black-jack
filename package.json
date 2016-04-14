@@ -1,6 +1,6 @@
 {
   "name": "black-jack",
-  "version": "0.7.0",
+  "version": "1.0.0",
   "description": "black-jack for 360",
   "main": "index.js",
   "dependencies": {

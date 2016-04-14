@@ -3,121 +3,291 @@
 <head>
   <title>blackjack demo</title>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <link rel="icon" href="static/favicon.ico">
 
   <style>
-    * {padding: 0; margin: 0; list-style: none;}
+    /*--css reset--*/
+    * { margin: 0; padding: 0; list-style: none; }
     html, body, main { width: 100%; height: 100%; }
+    html { font-size: 20px; }
+    /*--firefox 下长度异常 bug--*/
+    input { width: 95%; }
 
+    /*--media query--*/
+    @media only screen and (min-width: 401px) {
+      html { font-size: 25px; }
+    }
+    @media only screen and (min-width: 428px) {
+      html { font-size: 26.75px; }
+    }
+    @media only screen and (min-width: 481px) {
+      html { font-size: 30px; }
+    }
+    @media only screen and (min-width: 980px) {
+      html { font-size: 35px; }
+    }
+
+    /*--主容器，将 table--*/
     main {
+      display: -webkit-flex;
+      display:    -moz-flex;
+      display:     -ms-flex;
+      display:      -o-flex;
+      display:         flex;
+
       background-color: #669a40;
-      display: flex;
+
       justify-content: center;
       align-items: center;
     }
+    section { flex: 1 1 auto; }
 
+    /*--提示信息--*/
     #info {
-      display: none;
+      font-size: 16px;
+      font-weight: bold;
+      line-height: 1rem;
+
       position: absolute;
       top: 50%;
       left: 25%;
+
+      display: none;
+
       width: 50%;
-      margin-top: -30px;
-      height: 30px;
-      line-height: 30px;
+
+      -webkit-transform: translate3d(0, -50%, 0);
+         -moz-transform: translate3d(0, -50%, 0);
+          -ms-transform: translateY(-50%);
+           -o-transform: translateY(-50%);
+              transform: translate3d(0, -50%, 0);
+
       text-align: center;
-      background: #eee;
-      border-radius: 5px;
+
+      -webkit-border-radius: .25em;
+         -moz-border-radius: .25em;
+              border-radius: .25em;
+
+      background: -webkit-linear-gradient(to right, rgba(255, 255, 255, 0), rgba(255, 255, 255, .7), #EEE, rgba(255, 255, 255, .7), rgba(255, 255, 255, 0));
+      background:    -moz-linear-gradient(to right, rgba(255, 255, 255, 0), rgba(255, 255, 255, .7), #EEE, rgba(255, 255, 255, .7), rgba(255, 255, 255, 0));
+      background:      -o-linear-gradient(to right, rgba(255, 255, 255, 0), rgba(255, 255, 255, .7), #EEE, rgba(255, 255, 255, .7), rgba(255, 255, 255, 0));
+      background:         linear-gradient(to right, rgba(255, 255, 255, 0), rgba(255, 255, 255, .7), #EEE, rgba(255, 255, 255, .7), rgba(255, 255, 255, 0));
     }
 
-    section {
-      flex: 1 1 auto;
-    }
-
+    /*--桌面，牌和按钮都放在上面--*/
     .table {
-      display: flex;
+      display: -webkit-flex;
+      display:    -moz-flex;
+      display:     -ms-flex;
+      display:      -o-flex;
+      display:         flex;
       flex-direction: column;
+      justify-content: space-around;
+
       height: 100%;
     }
 
-    #pocket {
-      position: absolute;
-      top: 50px;
-      left: 50px;
+    /*--显示金钱数目、下注--*/
+    .board {
+      font-size: 16px;
 
-      display: flex;
+      position: absolute;
+      top: 50%;
+
+      display: -webkit-flex;
+      display:    -moz-flex;
+      display:     -ms-flex;
+      display:      -o-flex;
+      display:         flex;
       flex-direction: column;
-      width: 100px;
-      border: 1px solid white;
-      padding: 5px;
-      border-radius: 5px;
+
+      padding: .2rem;
+      width: 3rem;
+
+      -webkit-transform: translate3d(0, -50%, 0);
+         -moz-transform: translate3d(0, -50%, 0);
+          -ms-transform: translateY(-50%);
+           -o-transform: translateY(-50%);
+              transform: translate3d(0, -50%, 0);
+
       color: white;
+      border: 1px solid white;
+      -webkit-border-radius: .25em;
+         -moz-border-radius: .25em;
+              border-radius: .25em;
       background: rgba(0, 0, 0, .5);
     }
 
+    /*--用户可选的操作--*/
     #actions {
-      display: flex;
-      flex: 0 1 50px;
+      display: -webkit-flex;
+      display:    -moz-flex;
+      display:     -ms-flex;
+      display:      -o-flex;
+      display:         flex;
+
+      flex: 0 1 2rem;
     }
-    #actions button {
-      flex: 1 1 auto;
-    }
+    #actions button { flex: 1 1 auto; }
     #deal { order: -1; }
 
+    /*--规则图片--*/
     .rules {
-      display: flex;
+      display: -webkit-flex;
+      display:    -moz-flex;
+      display:     -ms-flex;
+      display:      -o-flex;
+      display:         flex;
+
       align-items: center;
       justify-content: center;
     }
-
     .rules > img { width: 70%; }
 
-    #dealer, #player {
-      /*border: 1px solid black;*/
-      display: flex;
+    /*--手牌区--*/
+    #dealer,
+    #player {
+      display: -webkit-flex;
+      display:    -moz-flex;
+      display:     -ms-flex;
+      display:      -o-flex;
+      display:         flex;
+
       align-items: center;
       justify-content: center;
     }
 
-    #dlrCards, #plrCards {
-      display: flex;
+    #dlrCards,
+    #plrCards {
+      display: -webkit-flex;
+      display:    -moz-flex;
+      display:     -ms-flex;
+      display:      -o-flex;
+      display:         flex;
+
+      align-items: center;
+      justify-content: center;
+
       flex: 0 1 auto;
+      height: 5rem;
+      width: 100%;
     }
 
+    /*--简单动画，玩家最后一张牌以动画的形式滑入--*/
+    #plrCards .card:last-of-type {
+      -webkit-animation: drawCard 0.4s ease-in-out 0.1s backwards;
+         -moz-animation: drawCard 0.4s ease-in-out 0.1s backwards;
+          -ms-animation: drawCard 0.4s ease-in-out 0.1s backwards;
+           -o-animation: drawCard 0.4s ease-in-out 0.1s backwards;
+              animation: drawCard 0.4s ease-in-out 0.1s backwards;
+    }
+    @-webkit-keyframes drawCard {
+      0% {
+        -webkit-transform: translate3d(100%, -100%, 0) rotate(0);
+           -moz-transform: translate3d(100%, -100%, 0) rotate(0);
+            -ms-transform: translate2d(100%, -100%) rotate(0);
+             -o-transform: translate2d(100%, -100%) rotate(0);
+                transform: translate3d(100%, -100%, 0) rotate(0);
+        opacity: 0;
+      }
+      100% {
+        -webkit-transform: translate3d(0, 0, 0) rotate(360deg);
+           -moz-transform: translate3d(0, 0, 0) rotate(360deg);
+            -ms-transform: translate2d(0, 0) rotate(360deg);
+             -o-transform: translate2d(0, 0) rotate(360deg);
+                transform: translate3d(0, 0, 0) rotate(360deg);
+        opacity: 1;
+      }
+    }
+
+    /*--卡牌--*/
     .card {
-      flex: 1 1 100px;
-      width: 80px;
-      height: 100px;
-      background: white;
-      border-radius: 5px;
       position: relative;
+
+      height: 5rem;
+
       border: 1px solid black;
+      -webkit-border-radius: .25em;
+         -moz-border-radius: .25em;
+              border-radius: .25em;
+      background: white;
+
+      flex: 0 1 4rem;
     }
+    /*--红色牌--*/
     .card.red { color: red; }
+    /*--庄家第一张牌--*/
+    .card.down { background-color: grey; }
 
-    /*庄家第一张牌*/
-    .down { background-color: grey; }
-
+    /*--点数和花色的位置--*/
     .pos-lt, .pos-rb { position: absolute; }
-
-    .pos-lt {
-      top: 3px;
-      left: 3px;
-    }
-
+    .pos-lt { top: .1rem; left: .1rem; }
     .pos-rb {
-      bottom: 3px;
-      right: 3px;
+      right: .1rem;
+      bottom: .1rem;
+
+      -webkit-transform: rotate(180deg);
+         -moz-transform: rotate(180deg);
+          -ms-transform: rotate(180deg);
+           -o-transform: rotate(180deg);
+              transform: rotate(180deg);
     }
 
+    /*--按钮样式--*/
+    .btn {
+      display: inline-block;
+      zoom: 1; /* zoom and *display = ie7 hack for display:inline-block */
+      *display: inline;
+      vertical-align: baseline;
+      /*margin: 0 2px;*/
+      outline: none;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      font: 14px/100% Arial, Helvetica, sans-serif;
+      padding: .5em .5em;
+      text-shadow: 0 1px 1px rgba(0,0,0,.3);
+      -webkit-border-radius: .5em;
+         -moz-border-radius: .5em;
+              border-radius: .5em;
+      -webkit-box-shadow: 0 1px 2px rgba(0,0,0,.2);
+         -moz-box-shadow: 0 1px 2px rgba(0,0,0,.2);
+              box-shadow: 0 1px 2px rgba(0,0,0,.2);
+    }
+    .btn:hover { text-decoration: none; }
+    .btn:disabled { opacity: .5; }
+    /* white */
+    .white {
+      color: #606060;
+      border: solid 1px #b7b7b7;
+      background: #fff;
+      background: -webkit-gradient(linear, left top, left bottom, from(#fff), to(#ededed));
+      background: -moz-linear-gradient(top, #fff, #ededed);
+      filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ffffff', endColorstr='#ededed');
+    }
+    .white:hover {
+      background: #ededed;
+      background: -webkit-gradient(linear, left top, left bottom, from(#fff), to(#dcdcdc));
+      background: -moz-linear-gradient(top, #fff, #dcdcdc);
+      filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ffffff', endColorstr='#dcdcdc');
+    }
+    .white:active {
+      color: #999;
+      background: -webkit-gradient(linear, left top, left bottom, from(#ededed), to(#fff));
+      background: -moz-linear-gradient(top, #ededed, #fff);
+      filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ededed', endColorstr='#ffffff');
+    }
   </style>
 </head>
 <body>
   <main>
     <!-- 悬浮显示：现金、赌注 -->
-    <section id="pocket">
-      <label for="plrMoney">Player's Money</label>
+    <section class="board">
+      <label for="plrMoney">Player</label>
       <input id="plrMoney" value="100" disabled />
-      <label for="dlrMoney">Dealer's Money</label>
+      <label for="dlrMoney">Dealer</label>
       <input id="dlrMoney" value="100" disabled />
       <label for="bet">Bet</label>
       <input type="number" id="bet" value="10" />
@@ -128,7 +298,6 @@
 
     <!-- 桌面 -->
     <section class="table">
-
       <!-- 庄家手牌 -->
       <section id="dealer">
         <ul id="dlrCards"></ul>
@@ -136,7 +305,7 @@
 
       <!-- 规则（本来应该用 SVG 或者 canvas 实现不过时间不够） -->
       <section class="rules">
-        <img src="img/rules.jpg" alt="rules">
+        <img src="static/rules.jpg" alt="rules">
       </section>
 
       <!-- 闲家手牌 -->
@@ -146,11 +315,11 @@
 
       <!-- 底部显示：玩家操作区 -->
       <section id="actions">
-        <button id="hit" class="btn" type="button" disabled>hit</button>
-        <button id="deal" class="btn" type="button" disabled>deal</button>
-        <button id="stand" class="btn" type="button" disabled>stand</button>
-        <button id="double" class="btn" type="button" disabled>double</button>
-        <button id="surrender" class="btn" type="button" disabled>surrender</button>
+        <button id="hit" class="btn white" type="button" disabled>hit</button>
+        <button id="deal" class="btn white" type="button" disabled>deal</button>
+        <button id="stand" class="btn white" type="button" disabled>stand</button>
+        <button id="double" class="btn white" type="button" disabled>double</button>
+        <button id="surrender" class="btn white" type="button" disabled>surrender</button>
       </section>
     </section>
   </main>
@@ -168,14 +337,20 @@
         displayState(JSON.parse(msg));
       });
 
-      socket.on('error', function(msg) { alert(msg); });
+      socket.on('error', function(msg) {
+        var tmp = msg.split('|');
+
+        if (tmp[1].substring(2) === socket.id) {
+          alert(tmp[0]);
+        }
+      });
 
       $("#actions").addEventListener('click', function(e){
         // console.log(e.target.id);
 
         switch (e.target.id) {
           case 'deal':
-            socket.emit('blackjack', 'deal ' + $("#bet").value);
+            socket.emit('blackjack', 'deal|' + $("#bet").value);
             break;
           case 'hit':
             socket.emit('blackjack', 'hit');
@@ -199,7 +374,6 @@
      * @desc 将数据转换为具体的界面显示
      * @author BuptStEve
      * @param {Object} state
-     * @return {null} null
      */
     function displayState(state) {
       var i, len, msg, cardStr, cardClass, docFrag,
@@ -220,7 +394,7 @@
       $("#dlrMoney").value = state.dm;
 
       /**
-       * 3. 展示卡牌
+       * 3.展示卡牌
        * -- template --
         <li class="card red">
           <div class="pos-lt">
@@ -231,6 +405,7 @@
           </div>
         </li>
        */
+
       docFrag = '';
       state.dc.map(function(elt) {
         cardClass = (elt.suit === '♥' || elt.suit === '◆') ? 'card red' : 'card';
@@ -251,7 +426,13 @@
 
         docFrag += cardStr;
       });
-      dlrCards.innerHTML = docFrag;
+      if (docFrag) {
+        if (dlrCards.innerHTML !== docFrag) {
+          dlrCards.innerHTML = docFrag;
+        }
+      } else {
+        dlrCards.innerHTML = '<li class="card" style="visibility: hidden;"></li>';
+      }
 
       docFrag = '';
       state.pc.map(function(elt) {
@@ -270,7 +451,13 @@
 
         docFrag += cardStr;
       });
-      plrCards.innerHTML = docFrag;
+      if (docFrag) {
+        if (plrCards.innerHTML !== docFrag) {
+          plrCards.innerHTML = docFrag;
+        }
+      } else {
+        plrCards.innerHTML = '<li class="card" style="visibility: hidden;"></li>';
+      }
 
       // 4.显示结果
       if (!state.re) {
@@ -281,8 +468,13 @@
       }
 
       // 5.安利保险
-      if (!!state.btns.insurance && confirm('是否买保险？')) {
-        socket.emit('blackjack', 'insurance');
+      if (!!state.btns.insurance) {
+        // 因为使用了 CSS3 延时动画，所以 confirm 也需要延时，否则会阻塞动画
+        setTimeout(function() {
+          if (confirm('是否买保险？')) {
+            socket.emit('blackjack', 'insurance');
+          }
+        }, 100);
       }
     }
 

@@ -2,7 +2,7 @@
 * @Author: BuptStEve
 * @Date:   2016-04-09 10:13:22
 * @Last Modified by:   BuptStEve
-* @Last Modified time: 2016-04-13 21:14:48
+* @Last Modified time: 2016-04-13 20:56:15
 */
 
 'use strict';
@@ -120,8 +120,8 @@ function Deck() {
         btns: this.btns,
         dm  : this.plrMoney[this.dealer],
         pm  : this.plrMoney[+!this.dealer],
-        re  : this.result,
-        rt  : ''
+        re  : -2,
+        rt  : '下注(bet)完成后，点击 deal 开始游戏~'
       };
       this.dlrData = {
         btns: {
@@ -338,9 +338,6 @@ function Deck() {
         if (this.plrPoint === 21) {
           // 拿到 blackjack
           this.result = 3;
-        } else if (this.dlrCards[1].rank === 1) {
-          // 庄家明牌为 Ace
-          this.btns.insurance = this._judgeInsurance();
         } else if (double) {
           // 闲家选择双倍，进行庄家开牌阶段
           this.plrCards.push(this._draw());
@@ -370,6 +367,9 @@ function Deck() {
               this.result = -2;
             }
           }
+        } else if (this.dlrCards[1].rank === 1) {
+          // 庄家明牌为 Ace
+          this.btns.insurance = this._judgeInsurance();
         }
       } else {
         // 非第一轮
@@ -448,7 +448,6 @@ function Deck() {
       switch (this.result) {
         case -6:
           this.plrData.rt = this.dlrData.rt = '闲家 double 失败';
-          this.plrMoney[this.dealer] += this.plrBet * 2; // 庄家赢得赌注
           break;
         case -5:
           this.plrData.rt = this.dlrData.rt = '闲家投降';

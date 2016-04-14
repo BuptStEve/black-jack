@@ -2,7 +2,7 @@
 * @Author: BuptStEve
 * @Date:   2016-04-08 21:19:39
 * @Last Modified by:   BuptStEve
-* @Last Modified time: 2016-04-13 21:05:41
+* @Last Modified time: 2016-04-14 20:19:49
 */
 
 var express = require('express'),
@@ -16,7 +16,7 @@ var express = require('express'),
       users: [] // 用户列表
     };
 
-app.use('/img', express.static(__dirname + '/img')); // 静态资源
+app.use('/static', express.static(__dirname + '/static')); // 静态资源
 
 app.get('/', function(req, res){
   res.sendFile(__dirname + '/index.html');
@@ -36,7 +36,7 @@ io.on('connection', function(socket){
       console.log(socket.id + ' send a msg...');
       console.log('users: ' + roomInfo.users[0].id + ' ' + roomInfo.users[1].id);
 
-      var tmp = msg.split(' '),
+      var tmp = msg.split('|'),
           num = roomInfo.users.indexOf(socket); // 闲家的下标
 
       if (num === -1) { return false; }
@@ -44,9 +44,9 @@ io.on('connection', function(socket){
       switch(tmp[0]) {
         case 'deal':
           if (!roomInfo.game.judgeBet(tmp[1], num)) {
-            socket.emit('error', 'bet 值不合法，请检查...');
+            io.emit('error', 'bet值不合法,请检查...|' + socket.id);
           } else if (!roomInfo.game.deal(tmp[1], num)) {
-            socket.emit('error', '请不要调皮...');
+            io.emit('error', '请不要调皮...|' + socket.id);
           } else {
             roomInfo.users.map(function(x) {
               if (x.id === socket.id) {
@@ -61,31 +61,31 @@ io.on('connection', function(socket){
           break;
         case 'hit':
           if (!roomInfo.game.hit()) {
-            io.to('players').emit('error', '请不要调皮...');
+            io.emit('error', '请不要调皮...|' + socket.id);
           }
           break;
         case 'stand':
           if (!roomInfo.game.stand()) {
-            io.to('players').emit('error', '请不要调皮...');
+            io.emit('error', '请不要调皮...|' + socket.id);
           }
           break;
         case 'double':
           if (!roomInfo.game.judgeDouble() || !roomInfo.game.double()) {
-            io.to('players').emit('error', '请不要调皮...');
+            io.emit('error', '请不要调皮...|' + socket.id);
           }
           break;
         case 'insurance':
           if (!roomInfo.game.insurance()) {
-            io.to('players').emit('error', '请不要调皮...');
+            io.emit('error', '请不要调皮...|' + socket.id);
           }
           break;
         case 'surrender':
           if (!roomInfo.game.surrender()) {
-            io.to('players').emit('error', '请不要调皮...');
+            io.emit('error', '请不要调皮...|' + socket.id);
           }
           break;
         default:
-          console.log('なに！？');
+          io.emit('error', '请不要调皮...|' + socket.id);
           break;
       }
 
@@ -99,6 +99,7 @@ io.on('connection', function(socket){
     io.to('players').emit('status', JSON.stringify(roomInfo.game.plrData));
   }
 
+  // 失联时
   socket.on('disconnect', function () {
     var index = roomInfo.users.indexOf(socket);
     console.log(socket.id + ' disconnected...');
@@ -107,8 +108,9 @@ io.on('connection', function(socket){
       roomInfo.users.splice(index, 1);
       roomInfo.game = new Deck();
       io.to('players').emit('status', JSON.stringify(roomInfo.game.plrData));
+      io.to('dealer').emit('status', JSON.stringify(roomInfo.game.plrData));
       socket.leave('players'); // 退出房间
-      socket.leave('dealer'); // 退出房间
+      socket.leave('dealer');  // 退出房间
     }
   });
 });
